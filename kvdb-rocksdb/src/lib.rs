@@ -170,6 +170,8 @@ pub struct DatabaseConfig {
 	pub compaction: CompactionProfile,
 	/// Set number of columns
 	pub columns: Option<u32>,
+        /// Bits to set in block bloom filters
+        pub block_bloom_filter_bits: Option<u8>,
 }
 
 impl DatabaseConfig {
@@ -197,6 +199,7 @@ impl Default for DatabaseConfig {
 			memory_budget: None,
 			compaction: CompactionProfile::default(),
 			columns: None,
+                        block_bloom_filter_bits: None,
 		}
 	}
 }
@@ -324,6 +327,10 @@ impl Database {
 		block_opts.set_block_size(config.compaction.block_size);
 		let cache_size = cmp::max(8, config.memory_budget() / 3);
 		block_opts.set_lru_cache(cache_size);
+
+                if let Some(block_bloom_filter_bits) = config.block_bloom_filter_bits {
+                        block_opts.set_bloom_filter(block_bloom_filter_bits as i32, true);
+                }
 
 		// attempt database repair if it has been previously marked as corrupted
 		let db_corrupted = Path::new(path).join(Database::CORRUPTION_FILE_NAME);

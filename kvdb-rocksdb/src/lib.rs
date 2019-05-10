@@ -172,6 +172,14 @@ pub struct DatabaseConfig {
 	pub columns: Option<u32>,
         /// Bits to set in block bloom filters
         pub block_bloom_filter_bits: Option<u8>,
+        /// Max size in bytes for l1 of the LSM
+        pub max_bytes_for_level_base: Option<u64>,
+        /// Target multiplier for subsequent levels in the LSM
+        pub max_bytes_for_level_multiplier: Option<f64>,
+        /// Target size in bytes for each file in the LSM l1
+        pub target_file_size_base: Option<u64>,
+        /// The amount of bytes to buffer before writing a memtable
+        pub write_buffer_size: Option<usize>,
 }
 
 impl DatabaseConfig {
@@ -200,6 +208,10 @@ impl Default for DatabaseConfig {
 			compaction: CompactionProfile::default(),
 			columns: None,
                         block_bloom_filter_bits: None,
+                        max_bytes_for_level_base: None,
+                        max_bytes_for_level_multiplier: None,
+                        target_file_size_base: None,
+                        write_buffer_size: None,
 		}
 	}
 }
@@ -234,6 +246,22 @@ fn col_config(config: &DatabaseConfig, block_opts: &BlockBasedOptions) -> io::Re
 
 	opts.optimize_level_style_compaction(config.memory_budget_per_col());
 	opts.set_target_file_size_base(config.compaction.initial_file_size);
+
+        if let Some(lb) = config.max_bytes_for_level_base {
+                opts.set_max_bytes_for_level_base(lb);
+        }
+
+        if let Some(lm) = config.max_bytes_for_level_multiplier {
+                opts.set_max_bytes_for_level_multiplier(lm);
+        }
+
+        if let Some(tb) = config.target_file_size_base {
+                opts.set_target_file_size_base(tb);
+        }
+
+        if let Some(wb) = config.write_buffer_size {
+                opts.set_write_buffer_size(wb);
+        }
 
 	Ok(opts)
 }
@@ -299,6 +327,22 @@ fn is_corrupted(err: &Error) -> bool {
 /// Generate the options for RocksDB, based on the given `DatabaseConfig`.
 fn generate_options(config: &DatabaseConfig) -> Options {
 	let mut opts = Options::default();
+
+        if let Some(lb) = config.max_bytes_for_level_base {
+                opts.set_max_bytes_for_level_base(lb);
+        }
+
+        if let Some(lm) = config.max_bytes_for_level_multiplier {
+                opts.set_max_bytes_for_level_multiplier(lm);
+        }
+
+        if let Some(tb) = config.target_file_size_base {
+                opts.set_target_file_size_base(tb);
+        }
+
+        if let Some(wb) = config.write_buffer_size {
+                opts.set_write_buffer_size(wb);
+        }
 
 	//TODO: rate_limiter_bytes_per_sec={} was removed
 
